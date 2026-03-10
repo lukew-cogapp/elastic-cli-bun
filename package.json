@@ -1,0 +1,27 @@
+{
+  "name": "esq",
+  "version": "0.1.0",
+  "description": "Read-only Elasticsearch / OpenSearch CLI client",
+  "module": "cli.ts",
+  "type": "module",
+  "bin": {
+    "esq": "./cli.ts"
+  },
+  "scripts": {
+    "dev": "bunli dev",
+    "build": "bunli build",
+    "test": "bun test"
+  },
+  "devDependencies": {
+    "@types/bun": "latest"
+  },
+  "peerDependencies": {
+    "typescript": "^5"
+  },
+  "dependencies": {
+    "@bunli/core": "^0.8.2",
+    "@opensearch-project/opensearch": "^3.5.1",
+    "dotenv": "^17.3.1",
+    "zod": "^4.3.6"
+  }
+}
