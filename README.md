@@ -183,3 +183,4 @@ bun run dev       # bunli dev mode
 ```
 
 Commands are auto-discovered from `commands/`. Add a new `.ts` file and it's immediately available — no registration needed. See [CLAUDE.md](CLAUDE.md) for the command template and conventions.
+
