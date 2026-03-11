@@ -86,13 +86,15 @@ export function loadConfig(envPath: string, varMappings?: string): EsConfig {
     )
   }
 
-  return {
+  const esConfig: EsConfig = {
     host: cloudId ? cloudIdToHost(cloudId) : host!,
     apiKey: env["ES_API_KEY"],
     user: env["ES_USER"],
     password: env["ES_PASSWORD"],
     cloudId,
   }
+
+  return esConfig
 }
 
 /**

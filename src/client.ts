@@ -1,10 +1,50 @@
-import { Client } from "@opensearch-project/opensearch"
+import { Client, errors } from "@opensearch-project/opensearch"
 import type { EsConfig } from "./config.ts"
+
+/**
+ * Format an OpenSearch client error into a human-readable message.
+ */
+function formatError(err: unknown, host: string): never {
+  if (err instanceof errors.ResponseError) {
+    const { statusCode, body, meta } = err
+    const reason =
+      body?.error?.reason ?? body?.error?.type ?? body?.error ?? null
+    const index = meta?.meta?.request?.params?.index
+    const lines = [`${statusCode} from ${host}`]
+    if (index) lines.push(`Index: ${index}`)
+    if (reason) lines.push(`Reason: ${reason}`)
+    if (statusCode === 401) lines.push("Check ES_USER and ES_PASSWORD credentials.")
+    if (statusCode === 403) lines.push("User lacks permissions for this operation.")
+    if (statusCode === 404 && index) lines.push(`Index "${index}" may not exist.`)
+    throw new Error(lines.join("\n"))
+  }
+
+  if (err instanceof errors.ConnectionError) {
+    throw new Error(
+      `Connection failed: ${host}\n${err.message}\nCheck that ES_HOST is correct and the cluster is reachable.`,
+    )
+  }
+
+  if (err instanceof errors.TimeoutError) {
+    throw new Error(`Request timed out: ${host}\n${err.message}`)
+  }
+
+  if (err instanceof errors.NoLivingConnectionsError) {
+    throw new Error(
+      `No living connections: ${host}\nThe cluster may be down or the URL may be wrong.`,
+    )
+  }
+
+  throw err
+}
 
 export class EsClient {
   readonly client: Client
+  readonly host: string
 
   constructor(config: EsConfig) {
+    this.host = config.host
+
     const opts: ConstructorParameters<typeof Client>[0] = {
       node: config.host,
       ssl: { rejectUnauthorized: false },
@@ -20,28 +60,48 @@ export class EsClient {
   }
 
   async search(params: { index: string; body: Record<string, unknown> }) {
-    const res = await this.client.search(params)
-    return res.body
+    try {
+      const res = await this.client.search(params)
+      return res.body
+    } catch (err) {
+      formatError(err, this.host)
+    }
   }
 
   async count(params: { index: string; body?: Record<string, unknown> }) {
-    const res = await this.client.count(params)
-    return res.body
+    try {
+      const res = await this.client.count(params)
+      return res.body
+    } catch (err) {
+      formatError(err, this.host)
+    }
   }
 
   async getDoc(params: { index: string; id: string }) {
-    const res = await this.client.get(params)
-    return res.body
+    try {
+      const res = await this.client.get(params)
+      return res.body
+    } catch (err) {
+      formatError(err, this.host)
+    }
   }
 
   async getMapping(params: { index: string }) {
-    const res = await this.client.indices.getMapping(params)
-    return res.body
+    try {
+      const res = await this.client.indices.getMapping(params)
+      return res.body
+    } catch (err) {
+      formatError(err, this.host)
+    }
   }
 
   async catIndices() {
-    const res = await this.client.cat.indices({ format: "json", s: "index" })
-    return res.body
+    try {
+      const res = await this.client.cat.indices({ format: "json", s: "index" })
+      return res.body
+    } catch (err) {
+      formatError(err, this.host)
+    }
   }
 
   /**
@@ -63,11 +123,15 @@ export class EsClient {
       throw new Error(`Blocked: POST to ${path} is not a known read-only operation. esq is read-only.`)
     }
 
-    const res = await this.client.transport.request({
-      method: upper,
-      path,
-      body,
-    })
-    return res.body
+    try {
+      const res = await this.client.transport.request({
+        method: upper,
+        path,
+        body,
+      })
+      return res.body
+    } catch (err) {
+      formatError(err, this.host)
+    }
   }
 }
