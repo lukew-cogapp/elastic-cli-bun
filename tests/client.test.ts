@@ -41,6 +41,37 @@ describe("EsClient read-only guards", () => {
     await expect(client.raw("POST", "/my-index/_delete_by_query")).rejects.toThrow("Blocked")
   })
 
+  // Query-string suffix bypass: /_bulk?pipeline=my_search should NOT pass
+  test("blocks POST with query string that ends in allowed suffix", async () => {
+    await expect(client.raw("POST", "/_bulk?pipeline=my_search")).rejects.toThrow("Blocked")
+  })
+
+  // Document ID suffix bypass: /_create/doc_search should NOT pass
+  test("blocks POST to _create with ID ending in _search", async () => {
+    await expect(client.raw("POST", "/my-index/_create/doc_search")).rejects.toThrow("Blocked")
+  })
+
+  test("blocks POST to _update with ID ending in _count", async () => {
+    await expect(client.raw("POST", "/my-index/_update/doc_count")).rejects.toThrow("Blocked")
+  })
+
+  // Mutating GET endpoints
+  test("blocks GET to _refresh", async () => {
+    await expect(client.raw("GET", "/my-index/_refresh")).rejects.toThrow("Blocked")
+  })
+
+  test("blocks GET to _flush", async () => {
+    await expect(client.raw("GET", "/my-index/_flush")).rejects.toThrow("Blocked")
+  })
+
+  test("blocks GET to _forcemerge", async () => {
+    await expect(client.raw("GET", "/my-index/_forcemerge")).rejects.toThrow("Blocked")
+  })
+
+  test("blocks GET to _cache/clear", async () => {
+    await expect(client.raw("GET", "/my-index/_cache/clear")).rejects.toThrow("Blocked")
+  })
+
   // These should NOT throw a guard error — they'll fail with connection error instead
   test("allows GET requests (fails on connection, not guard)", async () => {
     await expect(client.raw("GET", "/_cluster/health")).rejects.not.toThrow("Blocked")

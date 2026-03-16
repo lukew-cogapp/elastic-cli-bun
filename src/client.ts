@@ -114,12 +114,27 @@ export class EsClient {
       throw new Error(`Blocked: ${upper} requests are not allowed. esq is read-only.`)
     }
 
-    const SAFE_POST_PATTERNS = [
-      /_search$/, /_count$/, /_msearch$/, /_mget$/,
-      /_field_caps$/, /_validate\/query$/, /_explain$/, /_terms_enum$/,
+    // Strip query string before checking path patterns
+    const pathname = path.split("?")[0]
+
+    // Block mutating GET endpoints
+    const MUTATING_GET_PATTERNS = [
+      /\/_refresh(\/|$)/, /\/_flush(\/|$)/, /\/_forcemerge(\/|$)/,
+      /\/_cache\/clear(\/|$)/, /\/_close(\/|$)/, /\/_open(\/|$)/,
     ]
 
-    if (upper === "POST" && !SAFE_POST_PATTERNS.some((p) => p.test(path))) {
+    if (upper === "GET" && MUTATING_GET_PATTERNS.some((p) => p.test(pathname))) {
+      throw new Error(`Blocked: GET ${path} is a mutating operation. esq is read-only.`)
+    }
+
+    // Patterns match against path segments, not arbitrary suffixes.
+    // Each pattern requires the API keyword to appear after a / boundary.
+    const SAFE_POST_PATTERNS = [
+      /\/_search$/, /\/_count$/, /\/_msearch$/, /\/_mget$/,
+      /\/_field_caps$/, /\/_validate\/query$/, /\/_explain$/, /\/_terms_enum$/,
+    ]
+
+    if (upper === "POST" && !SAFE_POST_PATTERNS.some((p) => p.test(pathname))) {
       throw new Error(`Blocked: POST to ${path} is not a known read-only operation. esq is read-only.`)
     }
 
