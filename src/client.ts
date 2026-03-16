@@ -39,7 +39,7 @@ function formatError(err: unknown, host: string): never {
 }
 
 export class EsClient {
-  readonly client: Client
+  private readonly client: Client
   readonly host: string
 
   constructor(config: EsConfig) {
