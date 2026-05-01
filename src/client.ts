@@ -51,7 +51,12 @@ export class EsClient {
     }
 
     if (config.apiKey) {
-      opts.auth = { apiKey: config.apiKey } as never
+      // OpenSearch client's auth.apiKey path doesn't emit the
+      // `Authorization: ApiKey <key>` header that Elastic + Elastic
+      // Serverless require — it base64-wraps it as a Basic credential.
+      // Set the header explicitly so esq works against both OpenSearch
+      // (which also accepts ApiKey-style auth) and Elastic Serverless.
+      opts.headers = { Authorization: `ApiKey ${config.apiKey}` }
     } else if (config.user && config.password) {
       opts.auth = { username: config.user, password: config.password }
     }
