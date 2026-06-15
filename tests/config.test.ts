@@ -41,7 +41,27 @@ describe("loadConfig", () => {
   test("throws when missing ES_HOST and ES_CLOUD_ID", () => {
     const envPath = join(TMP, ".env")
     writeFileSync(envPath, "SOME_VAR=value\n")
-    expect(() => loadConfig(envPath)).toThrow("Missing ES_HOST or ES_CLOUD_ID")
+    expect(() => loadConfig(envPath)).toThrow("Missing ES_HOST, ES_CLOUD_ID, or a *_ES_URL var")
+  })
+
+  test("auto-detects a *_ES_URL / *_ES_API_KEY var without a mapping", () => {
+    const envPath = join(TMP, ".env")
+    writeFileSync(envPath, "ELASTICO_ES_URL=https://example.es.cloud:443\nELASTICO_ES_API_KEY=abc123\n")
+    const config = loadConfig(envPath)
+    expect(config.host).toBe("https://example.es.cloud:443")
+    expect(config.apiKey).toBe("abc123")
+  })
+
+  test("accepts a bare ES_URL as an alias for ES_HOST", () => {
+    const envPath = join(TMP, ".env")
+    writeFileSync(envPath, "ES_URL=https://bare.es.cloud:443\n")
+    expect(loadConfig(envPath).host).toBe("https://bare.es.cloud:443")
+  })
+
+  test("explicit ES_HOST wins over a *_ES_URL var", () => {
+    const envPath = join(TMP, ".env")
+    writeFileSync(envPath, "ES_HOST=https://explicit:443\nELASTICO_ES_URL=https://suffix:443\n")
+    expect(loadConfig(envPath).host).toBe("https://explicit:443")
   })
 
   test("throws on missing .env file", () => {

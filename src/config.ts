@@ -77,18 +77,35 @@ export function loadConfig(envPath: string, varMappings?: string): EsConfig {
     }
   }
 
-  const host = env["ES_HOST"]
+  // Suffix-based auto-detection. If the canonical keys aren't set explicitly
+  // (or via --var), fall back to any env var ENDING in `_ES_URL` / `_ES_API_KEY`
+  // — so prefixed names like ELASTICO_ES_URL, CDK_ES_URL, FAMSF_ES_API_KEY work
+  // with no .esq remap. A bare `ES_URL` is also accepted as an alias for ES_HOST.
+  // Explicit ES_HOST / ES_API_KEY (or a --var mapping) always win.
+  const findBySuffix = (suffix: string): string | undefined => {
+    // Deterministic: shortest key first, then alphabetical, so the choice is
+    // stable when several match (e.g. ES_URL beats ELASTICO_ES_URL).
+    const keys = Object.keys(env)
+      .filter((k) => k === suffix.slice(1) || k.endsWith(suffix))
+      .sort((a, b) => a.length - b.length || a.localeCompare(b))
+    for (const k of keys) {
+      if (env[k]) return env[k]
+    }
+    return undefined
+  }
+
+  const host = env["ES_HOST"] ?? findBySuffix("_ES_URL")
   const cloudId = env["ES_CLOUD_ID"]
 
   if (!host && !cloudId) {
     throw new Error(
-      `Missing ES_HOST or ES_CLOUD_ID in ${resolved}\nSee .env.example for required variables.`,
+      `Missing ES_HOST, ES_CLOUD_ID, or a *_ES_URL var in ${resolved}\nSee .env.example for required variables.`,
     )
   }
 
   const esConfig: EsConfig = {
     host: cloudId ? cloudIdToHost(cloudId) : host!,
-    apiKey: env["ES_API_KEY"],
+    apiKey: env["ES_API_KEY"] ?? findBySuffix("_ES_API_KEY"),
     user: env["ES_USER"],
     password: env["ES_PASSWORD"],
     cloudId,
