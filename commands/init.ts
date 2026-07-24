@@ -1,5 +1,5 @@
 import { writeFileSync, existsSync } from "fs"
-import { resolve } from "path"
+import { join, resolve } from "path"
 import { config } from "dotenv"
 import { defineCommand, option } from "@bunli/core"
 import { z } from "zod/v4"
@@ -26,9 +26,13 @@ export default defineCommand({
   name: "init",
   description: "Generate a .esq project file from your .env",
   options: {
-    env: option(z.string().default(".env"), {
-      description: "Path to .env file to scan",
+    env: option(z.string().optional(), {
+      description: "Path to .env file to scan (default: <project>/.env)",
       short: "e",
+    }),
+    project: option(z.string().default("."), {
+      description: "Directory to write the .esq file into (default: current dir)",
+      short: "p",
     }),
     force: option(z.boolean().default(false), {
       description: "Overwrite existing .esq file",
@@ -39,12 +43,13 @@ export default defineCommand({
     }),
   },
   handler: async ({ flags, prompt, colors }) => {
-    const esqPath = resolve(".esq")
+    const esqPath = resolve(join(flags.project, ".esq"))
     if (existsSync(esqPath) && !flags.force) {
       throw new Error(".esq already exists. Use --force to overwrite.")
     }
 
-    const resolved = resolve(flags.env)
+    const envPath = flags.env ?? join(flags.project, ".env")
+    const resolved = resolve(envPath)
     const result = config({ path: resolved, quiet: true })
     if (result.error) {
       throw new Error(`Failed to read ${resolved}: ${result.error.message}`)
@@ -75,7 +80,7 @@ export default defineCommand({
 
     if (detected.length === 0) {
       console.log("  No matching variables found.\n")
-      console.log(`Available vars in ${flags.env}:`)
+      console.log(`Available vars in ${resolved}:`)
       for (const key of keys) {
         console.log(`  ${key}`)
       }
@@ -85,8 +90,10 @@ export default defineCommand({
     console.log(detected.join("\n"))
     console.log()
 
-    const confirmed = flags.yes || await prompt.confirm("Write .esq file?")
-    if (!confirmed) return
+    if (!flags.yes) {
+      const confirmed = await prompt.confirm("Write .esq file?", { mode: "inline", default: true, fallbackValue: true })
+      if (!confirmed) return
+    }
 
     // Build .esq content
     const lines: string[] = ["# esq project config — maps .env vars to ES credentials"]

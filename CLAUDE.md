@@ -59,8 +59,9 @@ export default defineCommand({
 
 ## Key Conventions
 - **Read-only**: Never add write operations (PUT, DELETE, POST to non-search endpoints)
-- **connectionOptions spread**: All commands use `...connectionOptions` for shared `-e`/`--var` flags
-- **connect() factory**: Returns `{ client, defaultIndex }` — reads `.esq` project file automatically
+- **connectionOptions spread**: All commands use `...connectionOptions` for shared `-e`/`-p`/`--var` flags
+- **connect() factory**: Returns `{ client, defaultIndex }` — reads `.esq` from `--project` dir (default cwd)
+- **--project / -p**: Directory holding the `.esq` file, so `esq` can run from anywhere. `.env` defaults to `<project>/.env` unless `--env` overrides
 - **Output functions**: `formatOutput()` for console, `writeOutput()` + `inferFormat()` for file export
 - **--output / -o**: Available on most commands (not histogram or suggest). Format inferred from extension
 - **.esq project file**: Maps custom env var names to ES_HOST/ES_USER/ES_PASSWORD, sets default INDEX
