@@ -1,0 +1,5 @@
+#!/bin/sh
+# Bun transpiles @bunli/runtime's .tsx with the tsconfig in the current
+# directory, so a project that sets jsxImportSource (e.g. hono/jsx) breaks esq.
+root="$(cd "$(dirname "$(realpath "$0")")/.." && pwd)"
+exec bun --tsconfig-override "$root/tsconfig.json" "$root/cli.ts" "$@"

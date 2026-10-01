@@ -5,7 +5,7 @@
   "module": "cli.ts",
   "type": "module",
   "bin": {
-    "esq": "./cli.ts"
+    "esq": "./bin/esq"
   },
   "scripts": {
     "dev": "bunli dev",
